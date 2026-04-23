@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>주문/결제 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container">
+      <h1 class="page-title">주문 / 결제</h1>
+      <div id="view"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const items = MUSICM.getCart();
+    const view = document.getElementById('view');
+    const user = MUSICM.getUser();
+
+    if (items.length === 0) {
+      setSafeHTML(view, `
+        <div class="empty">
+          <p>주문할 상품이 없습니다.</p>
+          <a href="index.html" class="btn btn-primary">쇼핑 계속하기</a>
+        </div>
+      `);
+    } else {
+      const subtotal = MUSICM.cartTotal();
+      const shipping = subtotal >= 30000 ? 0 : 3000;
+      const total = subtotal + shipping;
+
+      const itemsHTML = items.map(it => {
+        const p = getProduct(it.productId);
+        if (!p) return '';
+        return `
+          <div style="display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0;">
+            <img src="${esc(p.image)}" style="width:60px; aspect-ratio:5/6; object-fit:cover; border-radius:4px;"/>
+            <div style="flex:1; font-size:12px;">
+              <div style="font-weight:700;">${esc(getBrand(p.brandId).name)}</div>
+              <div>${esc(p.name)}</div>
+              <div class="muted">${esc(it.color || '')}${it.size ? ` / ${esc(it.size)}` : ''} · ${it.qty}개</div>
+            </div>
+            <div style="font-weight:700; font-size:13px;">${formatPrice((p.salePrice || p.price) * it.qty)}</div>
+          </div>
+        `;
+      }).join('');
+
+      const html = `
+        <div class="checkout-grid">
+          <div>
+            <section class="checkout-section">
+              <h3>주문자 정보</h3>
+              <div class="form-group"><label>이름</label><input class="form-control" id="orderName" value="${esc(user?.name || '')}"/></div>
+              <div class="form-group"><label>연락처</label><input class="form-control" id="orderPhone" placeholder="010-0000-0000"/></div>
+              <div class="form-group"><label>이메일</label><input class="form-control" id="orderEmail" value="${esc(user?.email || '')}"/></div>
+            </section>
+
+            <section class="checkout-section">
+              <h3>배송지 정보</h3>
+              <div class="form-group"><label>받는 사람</label><input class="form-control" id="shipName"/></div>
+              <div class="form-group"><label>우편번호</label>
+                <div style="display:flex; gap:8px;">
+                  <input class="form-control" id="shipZip" style="width:160px;" placeholder="12345"/>
+                  <button class="btn btn-outline" type="button" onclick="toast('주소 검색 (목업)')">주소 검색</button>
+                </div>
+              </div>
+              <div class="form-group"><label>기본 주소</label><input class="form-control" id="shipAddr1" placeholder="기본 주소"/></div>
+              <div class="form-group"><label>상세 주소</label><input class="form-control" id="shipAddr2" placeholder="상세 주소"/></div>
+              <div class="form-group"><label>배송 요청사항</label>
+                <select class="form-control" id="shipMemo">
+                  <option>문 앞에 두고 초인종 눌러주세요</option>
+                  <option>문 앞에 두고 연락 주세요</option>
+                  <option>택배함에 넣어주세요</option>
+                  <option>배송 전 연락 바랍니다</option>
+                </select>
+              </div>
+            </section>
+
+            <section class="checkout-section">
+              <h3>결제 수단</h3>
+              <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+                <label class="btn btn-outline" style="justify-content:center; cursor:pointer;"><input type="radio" name="pay" value="card" checked style="display:none;"/>💳 신용카드</label>
+                <label class="btn btn-outline" style="justify-content:center; cursor:pointer;"><input type="radio" name="pay" value="bank" style="display:none;"/>🏦 계좌이체</label>
+                <label class="btn btn-outline" style="justify-content:center; cursor:pointer;"><input type="radio" name="pay" value="vbank" style="display:none;"/>📃 가상계좌</label>
+                <label class="btn btn-outline" style="justify-content:center; cursor:pointer;"><input type="radio" name="pay" value="kakao" style="display:none;"/>💬 카카오페이</label>
+              </div>
+              <div class="form-group" style="margin-top:16px;">
+                <label>쿠폰 사용</label>
+                <select class="form-control" id="couponSel">
+                  <option value="0">쿠폰을 선택해주세요</option>
+                  <option value="5000">[신규 가입] 5,000원 할인</option>
+                  <option value="10000">[Brand Week] 10,000원 할인</option>
+                  <option value="20000">[시즌오프] 20,000원 할인</option>
+                </select>
+              </div>
+            </section>
+          </div>
+
+          <aside>
+            <div class="cart-summary" style="position:sticky; top:100px;">
+              <h4>주문 상품 (${items.length})</h4>
+              <div style="max-height:260px; overflow:auto;">${itemsHTML}</div>
+              <div class="divider"></div>
+              <div class="row"><span>상품금액</span><span id="sumSubtotal">${formatPrice(subtotal)}</span></div>
+              <div class="row"><span>쿠폰할인</span><span id="sumCoupon">- 0원</span></div>
+              <div class="row"><span>배송비</span><span>${shipping === 0 ? '무료' : formatPrice(shipping)}</span></div>
+              <div class="row total"><span>최종 결제금액</span><span id="sumTotal" style="color:#ff2a2a;">${formatPrice(total)}</span></div>
+              <button class="btn btn-primary btn-block btn-lg" id="btnPay" style="margin-top:20px;">${formatPrice(total)} 결제하기</button>
+              <p class="muted" style="font-size:11px; margin-top:10px; line-height:1.5;">결제 진행 시 이용약관 및 개인정보 수집·이용에 동의하는 것으로 간주됩니다.</p>
+            </div>
+          </aside>
+        </div>
+      `;
+      setSafeHTML(view, html);
+
+      AMP.track('[Checkout] Checkout Viewed', { item_count: items.length, subtotal, shipping });
+
+      const couponSel = document.getElementById('couponSel');
+      couponSel.onchange = () => {
+        const disc = Number(couponSel.value);
+        document.getElementById('sumCoupon').textContent = '- ' + formatPrice(disc);
+        const newTotal = Math.max(0, subtotal + shipping - disc);
+        document.getElementById('sumTotal').textContent = formatPrice(newTotal);
+        document.getElementById('btnPay').textContent = formatPrice(newTotal) + ' 결제하기';
+        AMP.track('[Checkout] Coupon Applied', { coupon_value: disc });
+      };
+      document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', (e) => {
+        AMP.track('[Checkout] Payment Method Selected', { method: e.target.value });
+      }));
+
+      document.getElementById('btnPay').onclick = () => {
+        const name = document.getElementById('orderName').value.trim();
+        const phone = document.getElementById('orderPhone').value.trim();
+        const shipName = document.getElementById('shipName').value.trim();
+        if (!name || !phone || !shipName) { toast('필수 정보를 입력해주세요'); return; }
+
+        const disc = Number(couponSel.value);
+        const finalTotal = Math.max(0, subtotal + shipping - disc);
+
+        const order = {
+          id: 'MM' + Date.now(),
+          date: new Date().toISOString(),
+          items: items.map(it => {
+            const p = getProduct(it.productId);
+            return { ...it, name: p.name, brand: getBrand(p.brandId).name, image: p.image, unitPrice: p.salePrice || p.price };
+          }),
+          subtotal, shipping, coupon: disc, total: finalTotal,
+          name, phone, shipName,
+          status: '결제완료',
+        };
+        MUSICM.addOrder(order);
+        MUSICM.clearCart();
+        AMP.track('[Checkout] Payment Completed', {
+          order_id: order.id, total: order.total, subtotal: order.subtotal, shipping: order.shipping,
+          coupon: order.coupon, item_count: order.items.length,
+          brands: [...new Set(order.items.map(it => it.brand))],
+        });
+        location.href = 'checkout.html?complete=' + order.id;
+      };
+    }
+
+    // Order complete screen
+    const completeId = getQS('complete');
+    if (completeId) {
+      const orders = MUSICM.getOrders();
+      const order = orders.find(o => o.id === completeId);
+      if (order) {
+        const itemsHTML = order.items.map(it => `
+          <div style="display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0;">
+            <img src="${esc(it.image)}" style="width:60px; aspect-ratio:5/6; object-fit:cover; border-radius:4px;"/>
+            <div style="flex:1; font-size:12px;">
+              <div style="font-weight:700;">${esc(it.brand)}</div>
+              <div>${esc(it.name)}</div>
+              <div class="muted">${esc(it.color || '')}${it.size ? ` / ${esc(it.size)}` : ''} · ${it.qty}개</div>
+            </div>
+            <div style="font-weight:700;">${formatPrice(it.unitPrice * it.qty)}</div>
+          </div>
+        `).join('');
+        setSafeHTML(view, `
+          <div style="text-align:center; padding:40px 0;">
+            <div style="font-size:64px;">✅</div>
+            <h2 style="font-size:28px; font-weight:900; margin:16px 0 8px;">주문이 완료되었습니다</h2>
+            <p class="muted">주문번호: ${esc(order.id)}</p>
+          </div>
+          <div style="max-width:540px; margin:0 auto; background:#f7f7f7; border-radius:8px; padding:28px;">
+            <h4 style="margin:0 0 16px;">주문 내역</h4>
+            ${itemsHTML}
+            <div class="divider"></div>
+            <div class="row" style="display:flex; justify-content:space-between; padding:6px 0;"><span>상품금액</span><span>${formatPrice(order.subtotal)}</span></div>
+            <div class="row" style="display:flex; justify-content:space-between; padding:6px 0;"><span>배송비</span><span>${order.shipping === 0 ? '무료' : formatPrice(order.shipping)}</span></div>
+            <div class="row" style="display:flex; justify-content:space-between; padding:6px 0;"><span>쿠폰</span><span>- ${formatPrice(order.coupon)}</span></div>
+            <div style="display:flex; justify-content:space-between; padding:12px 0; border-top:1px solid #ddd; margin-top:8px; font-weight:900; font-size:18px;"><span>결제 금액</span><span style="color:#ff2a2a;">${formatPrice(order.total)}</span></div>
+            <div style="display:flex; gap:8px; margin-top:20px;">
+              <a href="mypage.html?tab=orders" class="btn btn-primary" style="flex:1;">주문 내역 보기</a>
+              <a href="index.html" class="btn btn-outline" style="flex:1;">쇼핑 계속하기</a>
+            </div>
+          </div>
+        `);
+        AMP.track('[Checkout] Order Complete Viewed', { order_id: order.id, total: order.total });
+      }
+    }
+  </script>
+</body>
+</html>

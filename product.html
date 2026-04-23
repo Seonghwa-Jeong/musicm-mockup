@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>상품 상세 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container">
+      <div id="view"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const id = Number(getQS('id'));
+    const p = getProduct(id);
+    const view = document.getElementById('view');
+
+    if (!p) {
+      setSafeHTML(view, '<div class="empty">상품을 찾을 수 없습니다. <a href="index.html" style="color:#ff2a2a;">홈으로</a></div>');
+    } else {
+      const b = getBrand(p.brandId);
+      const cat = CATEGORY_MAP[p.category];
+      const finalPrice = p.salePrice || p.price;
+      const disc = discountPercent(p);
+      const related = getProductsByBrand(p.brandId).filter(x => x.id !== p.id).slice(0, 5);
+
+      const html = `
+        <nav class="breadcrumb">
+          <span><a href="index.html">홈</a></span>
+          <span><a href="category.html?cat=${esc(p.category)}">${esc(cat.name)}</a></span>
+          <span><a href="brand.html?id=${esc(b.id)}">${esc(b.name)}</a></span>
+          <span>${esc(p.name)}</span>
+        </nav>
+
+        <div class="pd-layout">
+          <div class="pd-gallery">
+            <div class="main"><img id="mainImg" src="${esc(p.images[0])}" alt="${esc(p.name)}" style="width:100%; height:100%; object-fit:cover;"/></div>
+            <div class="thumbs">
+              ${p.images.map((src, i) => `<img src="${esc(src)}" data-idx="${i}" class="${i===0?'active':''}" alt=""/>`).join('')}
+            </div>
+          </div>
+
+          <div class="pd-info">
+            <a href="brand.html?id=${esc(b.id)}" class="brand-link">${esc(b.name)} ></a>
+            <h1>${esc(p.name)}</h1>
+            <div class="rating">★ ${esc(p.rating)} · 리뷰 ${p.reviews.toLocaleString()}개 · 찜 ${Math.floor(p.reviews * 0.3).toLocaleString()}</div>
+
+            <div class="price-block">
+              <div class="price-main">
+                ${p.salePrice ? `<span class="discount">${disc}%</span><span class="price-final">${formatPrice(p.salePrice)}</span><span class="price-orig">${formatPrice(p.price)}</span>` : `<span class="price-final">${formatPrice(p.price)}</span>`}
+              </div>
+              <div style="margin-top:10px; font-size:12px; color:#666;">카드 무이자 할부 가능 · 3만원 이상 무료배송</div>
+            </div>
+
+            <div class="pd-options">
+              <label>색상</label>
+              <select id="colorSel">
+                ${p.colors.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="pd-options">
+              <label>사이즈</label>
+              <select id="sizeSel">
+                <option value="">사이즈를 선택해주세요</option>
+                ${p.sizes.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="pd-options">
+              <label>수량</label>
+              <div style="display:inline-flex; border:1px solid #ddd; border-radius:4px; overflow:hidden;">
+                <button type="button" id="qtyMinus" style="width:40px; height:40px; background:#fff;">−</button>
+                <input id="qtyInp" value="1" type="number" min="1" style="width:60px; height:40px; border:0; text-align:center; border-left:1px solid #ddd; border-right:1px solid #ddd;"/>
+                <button type="button" id="qtyPlus" style="width:40px; height:40px; background:#fff;">+</button>
+              </div>
+            </div>
+
+            <div class="pd-actions">
+              <button class="btn btn-outline btn-cart" id="btnCart">장바구니</button>
+              <button class="btn btn-primary" id="btnBuy">바로 구매</button>
+              <button class="btn btn-outline" id="btnWish" style="grid-column: span 3;">♡ 찜하기</button>
+            </div>
+
+            <div style="margin-top:30px; padding:20px; background:#f7f7f7; border-radius:6px; font-size:13px; line-height:1.7;">
+              <strong>상품 설명</strong><br/>
+              ${esc(p.desc)}
+            </div>
+          </div>
+        </div>
+
+        <section class="section" style="padding:20px 0 60px; border-top:1px solid #eee; margin-top:40px;">
+          <h3>${esc(b.name)}의 다른 상품</h3>
+          <p class="section-sub">같은 브랜드 추천</p>
+          <div class="product-grid" id="relatedGrid"></div>
+        </section>
+      `;
+      setSafeHTML(view, html);
+      setSafeHTML(document.getElementById('relatedGrid'), related.map(productCardHTML).join(''));
+
+      // Product Viewed
+      AMP.track('[Product] Product Viewed', {
+        product_id: p.id,
+        product_name: p.name,
+        brand: b.name,
+        category: cat.name,
+        price: p.price,
+        sale_price: p.salePrice,
+        has_sale: !!p.salePrice,
+        discount_percent: disc,
+      });
+
+      // Related
+      document.getElementById('relatedGrid').addEventListener('click', (e) => {
+        const card = e.target.closest('.product-card');
+        if (!card) return;
+        const m = (card.getAttribute('href') || '').match(/id=(\d+)/);
+        if (!m) return;
+        AMP.track('[Product] Related Product Clicked', {
+          product_id: Number(m[1]), from_product_id: p.id, from_brand: b.name,
+        });
+      });
+
+      // Gallery
+      const mainImg = document.getElementById('mainImg');
+      document.querySelectorAll('.pd-gallery .thumbs img').forEach(t => {
+        t.addEventListener('click', () => {
+          document.querySelectorAll('.pd-gallery .thumbs img').forEach(i => i.classList.remove('active'));
+          t.classList.add('active');
+          mainImg.src = t.src;
+          AMP.track('[Product] Gallery Thumb Clicked', { product_id: p.id, index: Number(t.dataset.idx) });
+        });
+      });
+
+      // Size / Color
+      document.getElementById('sizeSel').addEventListener('change', (e) => {
+        if (e.target.value) AMP.track('[Product] Size Selected', { product_id: p.id, size: e.target.value });
+      });
+      document.getElementById('colorSel').addEventListener('change', (e) => {
+        AMP.track('[Product] Color Selected', { product_id: p.id, color: e.target.value });
+      });
+
+      // Qty
+      const qty = document.getElementById('qtyInp');
+      function trackQty(direction) { AMP.track('[Product] Quantity Changed', { product_id: p.id, qty: Number(qty.value), direction }); }
+      document.getElementById('qtyMinus').onclick = () => { qty.value = Math.max(1, Number(qty.value) - 1); trackQty('decrement'); };
+      document.getElementById('qtyPlus').onclick = () => { qty.value = Number(qty.value) + 1; trackQty('increment'); };
+
+      // Actions
+      function currentOpts() {
+        const size = document.getElementById('sizeSel').value;
+        const color = document.getElementById('colorSel').value;
+        const q = Math.max(1, Number(qty.value) || 1);
+        if (p.sizes.length && !size) { toast('사이즈를 선택해주세요'); return null; }
+        return { size, color, qty: q };
+      }
+      document.getElementById('btnCart').onclick = () => {
+        const o = currentOpts(); if (!o) return;
+        MUSICM.addToCart(p.id, o);
+        AMP.track('[Product] Added To Cart', {
+          product_id: p.id, product_name: p.name, brand: b.name,
+          size: o.size, color: o.color, qty: o.qty,
+          price: p.salePrice || p.price,
+        });
+        toast('장바구니에 담았습니다');
+      };
+      document.getElementById('btnBuy').onclick = () => {
+        const o = currentOpts(); if (!o) return;
+        MUSICM.addToCart(p.id, o);
+        AMP.track('[Product] Buy Now Clicked', {
+          product_id: p.id, product_name: p.name, brand: b.name,
+          size: o.size, color: o.color, qty: o.qty,
+          price: p.salePrice || p.price,
+        });
+        location.href = 'checkout.html?buy=' + p.id;
+      };
+      document.getElementById('btnWish').onclick = () => {
+        const isWish = MUSICM.toggleWishlist(p.id);
+        AMP.track('[Product] Wishlist Toggled', { product_id: p.id, brand: b.name, added: isWish });
+        toast(isWish ? '찜 목록에 추가했습니다' : '찜 목록에서 제거했습니다');
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>장바구니 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container">
+      <h1 class="page-title">장바구니</h1>
+      <p class="page-sub" id="cartSub">쇼핑을 계속하거나 주문을 진행하세요.</p>
+      <div id="cartView"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    function render() {
+      const items = MUSICM.getCart();
+      const view = document.getElementById('cartView');
+      if (items.length === 0) {
+        setSafeHTML(view, `
+          <div class="empty">
+            <div style="font-size:60px;">🛒</div>
+            <h3 style="margin:20px 0 10px;">장바구니가 비어 있습니다</h3>
+            <p class="muted">원하시는 상품을 담아보세요.</p>
+            <a href="index.html" class="btn btn-primary" style="margin-top:20px;">쇼핑 계속하기</a>
+          </div>
+        `);
+        return;
+      }
+
+      const subtotal = MUSICM.cartTotal();
+      const shipping = subtotal >= 30000 ? 0 : 3000;
+      const total = subtotal + shipping;
+
+      document.getElementById('cartSub').textContent = `총 ${items.length}개 상품`;
+
+      const itemsHTML = items.map(it => {
+        const p = getProduct(it.productId);
+        if (!p) return '';
+        const price = (p.salePrice || p.price) * it.qty;
+        return `
+          <div class="cart-item">
+            <a href="product.html?id=${esc(p.id)}"><img src="${esc(p.image)}" alt="${esc(p.name)}"/></a>
+            <div>
+              <div class="cart-brand">${esc(getBrand(p.brandId).name)}</div>
+              <a href="product.html?id=${esc(p.id)}" class="cart-name">${esc(p.name)}</a>
+              <div class="cart-opts">${esc(it.color || '')}${it.size ? ` / ${esc(it.size)}` : ''}</div>
+              <div class="qty">
+                <button data-key="${esc(it.key)}" data-act="minus">−</button>
+                <input value="${it.qty}" data-key="${esc(it.key)}" type="number" min="1"/>
+                <button data-key="${esc(it.key)}" data-act="plus">+</button>
+              </div>
+            </div>
+            <div>
+              <div class="cart-price">${formatPrice(price)}</div>
+              <button class="remove" data-remove="${esc(it.key)}">× 삭제</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const html = `
+        <div class="cart-grid">
+          <div>${itemsHTML}</div>
+          <aside class="cart-summary">
+            <h4>주문 요약</h4>
+            <div class="row"><span>상품금액</span><span>${formatPrice(subtotal)}</span></div>
+            <div class="row"><span>배송비</span><span>${shipping === 0 ? '무료' : formatPrice(shipping)}</span></div>
+            ${shipping === 0 ? '' : `<div class="row muted"><span>무료배송까지</span><span>${formatPrice(30000-subtotal)}</span></div>`}
+            <div class="row total"><span>최종 결제금액</span><span style="color:#ff2a2a;">${formatPrice(total)}</span></div>
+            <button class="btn btn-primary btn-block btn-lg" id="btnCheckout" style="margin-top:20px;">주문하기</button>
+            <a href="index.html" class="btn btn-outline btn-block" style="margin-top:8px;">쇼핑 계속하기</a>
+          </aside>
+        </div>
+      `;
+      setSafeHTML(view, html);
+
+      document.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
+        const it = MUSICM.getCart().find(i => i.key === b.dataset.remove);
+        AMP.track('[Cart] Item Removed', { product_id: it?.productId, size: it?.size, color: it?.color });
+        MUSICM.removeFromCart(b.dataset.remove); render();
+      });
+      document.querySelectorAll('.qty button').forEach(b => b.onclick = () => {
+        const items = MUSICM.getCart();
+        const it = items.find(i => i.key === b.dataset.key);
+        if (!it) return;
+        const newQty = b.dataset.act === 'minus' ? it.qty - 1 : it.qty + 1;
+        MUSICM.updateQty(it.key, newQty); render();
+        AMP.track('[Cart] Quantity Updated', { product_id: it.productId, qty: Math.max(1,newQty), direction: b.dataset.act });
+      });
+      document.querySelectorAll('.qty input').forEach(inp => inp.onchange = () => {
+        MUSICM.updateQty(inp.dataset.key, Number(inp.value)); render();
+      });
+      document.getElementById('btnCheckout').onclick = () => {
+        AMP.track('[Cart] Checkout Clicked', { item_count: MUSICM.getCart().length, total: MUSICM.cartTotal() });
+        location.href = 'checkout.html';
+      };
+    }
+
+    render();
+    AMP.track('[Cart] Cart Viewed', { item_count: MUSICM.getCart().length, total: MUSICM.cartTotal() });
+  </script>
+</body>
+</html>

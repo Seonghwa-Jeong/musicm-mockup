@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>카테고리 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container-wide">
+      <nav class="breadcrumb">
+        <span><a href="index.html">홈</a></span>
+        <span id="bcTrail">전체 카테고리</span>
+      </nav>
+
+      <h1 class="page-title" id="pageTitle">전체 상품</h1>
+      <p class="page-sub" id="pageSub">MUSICM에서 판매하는 모든 상품을 만나보세요.</p>
+
+      <div class="chip-row" id="catChips"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div id="resultCount" class="muted"></div>
+        <select id="sortSelect" style="height:36px; border:1px solid #ddd; border-radius:4px; padding:0 10px;">
+          <option value="popular">인기순</option>
+          <option value="new">신상품순</option>
+          <option value="low">낮은 가격순</option>
+          <option value="high">높은 가격순</option>
+          <option value="rating">평점순</option>
+        </select>
+      </div>
+
+      <div class="product-grid" id="grid"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script>window.__navActive = getQSEarly('cat') || 'category';
+    function getQSEarly(name) { return new URLSearchParams(location.search).get(name); }
+  </script>
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const catId = getQS('cat');
+    const activeCat = catId && CATEGORY_MAP[catId] ? catId : 'all';
+
+    // Chip row
+    const chipsHTML = `
+      <a href="category.html" class="chip ${activeCat==='all'?'active':''}">전체</a>
+      ` + CATEGORIES.map(c => `
+        <a href="category.html?cat=${esc(c.id)}" class="chip ${activeCat===c.id?'active':''}">${esc(c.name)}</a>
+      `).join('');
+    setSafeHTML(document.getElementById('catChips'), chipsHTML);
+
+    // Title
+    if (activeCat !== 'all') {
+      const cat = CATEGORY_MAP[activeCat];
+      document.getElementById('pageTitle').textContent = cat.name;
+      document.getElementById('pageSub').textContent = `${cat.name} 카테고리의 모든 상품`;
+      document.getElementById('bcTrail').textContent = cat.name;
+    }
+
+    let list = activeCat === 'all' ? [...PRODUCTS] : PRODUCTS.filter(p => p.category === activeCat);
+
+    function applySortAndRender() {
+      const sort = document.getElementById('sortSelect').value;
+      const priceOf = p => p.salePrice || p.price;
+      const sorted = [...list];
+      if (sort === 'new') sorted.sort((a,b) => (b.badge==='NEW') - (a.badge==='NEW') || b.id - a.id);
+      else if (sort === 'low') sorted.sort((a,b) => priceOf(a) - priceOf(b));
+      else if (sort === 'high') sorted.sort((a,b) => priceOf(b) - priceOf(a));
+      else if (sort === 'rating') sorted.sort((a,b) => parseFloat(b.rating) - parseFloat(a.rating));
+      else sorted.sort((a,b) => b.reviews - a.reviews);
+
+      document.getElementById('resultCount').textContent = `총 ${sorted.length.toLocaleString()}개 상품`;
+      setSafeHTML(document.getElementById('grid'), sorted.map(productCardHTML).join('') || '<div class="empty">상품이 없습니다.</div>');
+    }
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+      AMP.track('[Category] Sort Changed', { sort: e.target.value, category: activeCat });
+      applySortAndRender();
+    });
+    applySortAndRender();
+
+    AMP.track('[Category] Category Viewed', { category: activeCat });
+
+    document.getElementById('grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.product-card');
+      if (!card) return;
+      const m = (card.getAttribute('href') || '').match(/id=(\d+)/);
+      if (!m) return;
+      const p = getProduct(Number(m[1]));
+      AMP.track('[Category] Product Clicked', {
+        product_id: Number(m[1]),
+        category: activeCat,
+        brand: p && getBrand(p.brandId)?.name,
+      });
+    });
+    document.querySelectorAll('#catChips .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        AMP.track('[Category] Chip Clicked', { category: chip.textContent.trim() });
+      });
+    });
+  </script>
+</body>
+</html>

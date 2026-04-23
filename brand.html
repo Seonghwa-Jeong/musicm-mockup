@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>브랜드 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container-wide">
+      <div id="view"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script>window.__navActive = 'brand';</script>
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const brandId = getQS('id');
+    const view = document.getElementById('view');
+
+    if (brandId && BRAND_MAP[brandId]) {
+      const b = BRAND_MAP[brandId];
+      const products = getProductsByBrand(brandId);
+      const html = `
+        <nav class="breadcrumb">
+          <span><a href="index.html">홈</a></span>
+          <span><a href="brand.html">브랜드</a></span>
+          <span>${esc(b.name)}</span>
+        </nav>
+        <div class="campaign-hero" style="height:280px;">
+          <img src="${esc(b.hero)}" alt="${esc(b.name)}"/>
+          <div class="overlay">
+            <div style="font-size:12px; letter-spacing:2px; opacity:0.9;">${esc(b.tag)}</div>
+            <h1>${esc(b.name)}</h1>
+            <p class="tag">${esc(b.desc)}</p>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0;">
+          <div class="muted">총 ${products.length}개 상품</div>
+          <a href="brand.html" style="font-size:13px;">← 전체 브랜드</a>
+        </div>
+        <div class="product-grid" id="brandGrid"></div>
+      `;
+      setSafeHTML(view, html);
+      setSafeHTML(document.getElementById('brandGrid'), products.map(productCardHTML).join(''));
+
+      AMP.track('[Brand] Brand Page Viewed', {
+        brand_id: b.id, brand_name: b.name, product_count: products.length,
+      });
+      document.getElementById('brandGrid').addEventListener('click', (e) => {
+        const card = e.target.closest('.product-card');
+        if (!card) return;
+        const m = (card.getAttribute('href') || '').match(/id=(\d+)/);
+        if (!m) return;
+        AMP.track('[Brand] Product Clicked', {
+          product_id: Number(m[1]), brand_id: b.id, brand_name: b.name,
+        });
+      });
+    } else {
+      // Brand list
+      const grouped = {};
+      BRANDS.forEach(b => {
+        if (!grouped[b.tag]) grouped[b.tag] = [];
+        grouped[b.tag].push(b);
+      });
+      let html = `
+        <nav class="breadcrumb">
+          <span><a href="index.html">홈</a></span>
+          <span>전체 브랜드</span>
+        </nav>
+        <h1 class="page-title">전체 브랜드</h1>
+        <p class="page-sub">MUSICM이 엄선한 ${BRANDS.length}개 브랜드를 만나보세요.</p>
+      `;
+      Object.entries(grouped).forEach(([tag, brands]) => {
+        html += `
+          <section style="margin: 40px 0;">
+            <h3 style="font-size:18px; font-weight:800; margin:0 0 16px; padding-bottom:10px; border-bottom:2px solid #111; display:inline-block;">${esc(tag)}</h3>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+              ${brands.map(b => {
+                const cnt = getProductsByBrand(b.id).length;
+                return `
+                  <a href="brand.html?id=${esc(b.id)}" style="border:1px solid #eee; border-radius:8px; padding:20px; display:block; transition:.15s;" onmouseover="this.style.borderColor='#111'" onmouseout="this.style.borderColor='#eee'">
+                    <div style="font-weight:800; font-size:17px;">${esc(b.name)}</div>
+                    <div class="muted" style="margin:4px 0 10px;">${esc(b.nameKr)}</div>
+                    <div style="font-size:12px; color:#444; line-height:1.5; height:3em; overflow:hidden;">${esc(b.desc)}</div>
+                    <div style="margin-top:12px; font-size:12px; color:#ff2a2a; font-weight:700;">${cnt}개 상품 →</div>
+                  </a>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        `;
+      });
+      setSafeHTML(view, html);
+      AMP.track('[Brand] Brand List Viewed', { brand_count: BRANDS.length });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>검색 · MUSICM</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="js/purify.min.js"></script>
+  <script src="js/amplitude-config.js"></script>
+  <script type="module" src="js/amplitude.js"></script>
+</head>
+<body>
+  <header class="site-header"></header>
+
+  <main>
+    <div class="container-wide">
+      <nav class="breadcrumb">
+        <span><a href="index.html">홈</a></span>
+        <span>검색 결과</span>
+      </nav>
+      <h1 class="page-title" id="pageTitle">검색 결과</h1>
+      <p class="page-sub" id="pageSub"></p>
+
+      <div id="brandMatches" style="margin-bottom:30px;"></div>
+
+      <div class="product-grid" id="grid"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"></footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    const q = getQS('q') || '';
+    document.getElementById('pageTitle').textContent = `"${q}" 검색 결과`;
+
+    const matches = searchProducts(q);
+    const brandMatches = BRANDS.filter(b =>
+      b.name.toLowerCase().includes(q.toLowerCase()) || b.nameKr.includes(q)
+    );
+
+    document.getElementById('pageSub').textContent = `상품 ${matches.length}개 · 브랜드 ${brandMatches.length}개`;
+
+    if (brandMatches.length) {
+      const bhtml = `
+        <h3 style="font-size:16px; font-weight:800; margin:0 0 12px;">브랜드</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${brandMatches.map(b => `<a href="brand.html?id=${esc(b.id)}" class="chip">${esc(b.name)}</a>`).join('')}
+        </div>
+      `;
+      setSafeHTML(document.getElementById('brandMatches'), bhtml);
+    }
+
+    if (matches.length === 0) {
+      setSafeHTML(document.getElementById('grid'), `
+        <div class="empty" style="grid-column: 1/-1;">
+          "${esc(q)}"에 대한 검색 결과가 없습니다.<br/>
+          <a href="index.html" style="color:#ff2a2a;">홈으로 돌아가기</a>
+        </div>
+      `);
+    } else {
+      setSafeHTML(document.getElementById('grid'), matches.map(productCardHTML).join(''));
+    }
+
+    AMP.track('[Search] Search Results Viewed', {
+      keyword: q, product_count: matches.length, brand_count: brandMatches.length,
+    });
+    document.getElementById('grid').addEventListener('click', (e) => {
+      const card = e.target.closest('.product-card');
+      if (!card) return;
+      const m = (card.getAttribute('href') || '').match(/id=(\d+)/);
+      if (!m) return;
+      AMP.track('[Search] Search Result Clicked', { keyword: q, product_id: Number(m[1]) });
+    });
+  </script>
+</body>
+</html>

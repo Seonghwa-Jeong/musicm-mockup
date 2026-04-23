@@ -218,8 +218,7 @@ const PRODUCTS = [
   P('matin-kim', 'bottom','와이드 데님', 99000, null, { colors:['미드블루','블랙'], sizes:['S','M','L'], image: 'https://images.unsplash.com/photo-1542272604-787c62e70212?w=500&h=600&fit=crop', imageHover: 'https://images.unsplash.com/photo-1542272604-787c62e70212?w=500&h=600&fit=crop' }),
   P('matin-kim', 'bag',   '글로시 하트 백', 169000, 129000, { badge:'BEST', colors:['블랙','아이보리','크림'], image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&h=600&fit=crop', imageHover: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&h=600&fit=crop' }),
   P('matin-kim', 'acc',   '로고 머플러', 69000, null, { colors:['블랙','크림','라벤더'], image: 'https://images.unsplash.com/photo-1572307479644-ffde1e366d4f?w=500&h=600&fit=crop', imageHover: 'https://images.unsplash.com/photo-1572307479644-ffde1e366d4f?w=500&h=600&fit=crop' }),
-];
-  P('adidas', 'top',   '파이어버드 트랙자켓', 119000, null, { badge:'NEW', colors:['블랙/화이트','레드/화이트'] }),
+  P('adidas', 'top',   '파이어버드 트랙자켓', 119000, null, { badge:'NEW', colors:['블랙/화이트','레드/화이트'], image: 'https://images.unsplash.com/photo-1551028719-00167b16ebc5?w=500&h=600&fit=crop', imageHover: 'https://images.unsplash.com/photo-1551028719-00167b16ebc5?w=500&h=600&fit=crop' }),
   P('adidas', 'top',   '에센셜 플리스 후디', 79000, 59000, { colors:['블랙','그레이'] }),
   P('adidas', 'bottom','파이어버드 트랙팬츠', 109000, null, { colors:['블랙','네이비','그린'] }),
   P('adidas', 'bottom','에센셜 3스트라이프 쇼츠', 49000, 35000, { colors:['블랙','네이비'] }),

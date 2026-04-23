@@ -10,7 +10,7 @@ const BRANDS = [
   { id: 'carhartt', name: 'Carhartt WIP', nameKr: '칼하트', tag: '워크웨어', desc: '1889년부터 이어진 아메리칸 워크웨어의 정수', hero: 'https://images.unsplash.com/photo-1516762381361-ce04d6a90d6b?w=1600&q=70' },
   { id: 'stussy', name: 'Stüssy', nameKr: '스투시', tag: '스트릿', desc: '1980년대 서핑 컬처에서 시작된 오리지널 스트리트웨어', hero: 'https://images.unsplash.com/photo-1523398002811-999ca8dec234?w=1600&q=70' },
   { id: 'ralph-lauren', name: 'Polo Ralph Lauren', nameKr: '폴로 랄프로렌', tag: '클래식', desc: '아메리칸 클래식의 아이콘, 폴로 플레이어 로고', hero: 'https://images.unsplash.com/photo-1564859228273-274232fdb516?w=1600&q=70' },
-  { id: 'converse', name: 'Converse', nameKr: '컨버스', tag: '스니커즈', desc: '척테일러 올스타, 100년 넘은 아이코닉 스니커즈', hero: 'https://images.unsplash.com/photo-1514989940723-e8e51635289b?w=1600&q=70' },
+  { id: 'converse', name: 'Converse', nameKr: '컨버스', tag: '스니커즈', desc: '척테일러 올스타, 100년 넘은 아이코닉 스니커즈', hero: 'https://images.unsplash.com/photo-1542826438-bd32f43d626f?w=1600&q=70' },
   { id: 'vans', name: 'Vans', nameKr: '반스', tag: '스트릿', desc: 'Off the Wall. 스케이트보드 컬처의 오리지널', hero: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=1600&q=70' },
   { id: 'puma', name: 'Puma', nameKr: '푸마', tag: '스포츠', desc: 'Forever Faster. 스피드와 스타일의 만남', hero: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=1600&q=70' },
   { id: 'covernat', name: 'Covernat', nameKr: '커버낫', tag: '스트릿', desc: '한국을 대표하는 캐주얼 스트릿 브랜드', hero: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=1600&q=70' },
@@ -27,19 +27,94 @@ const CATEGORIES = [
   { id: 'acc', name: '액세서리' },
 ];
 
-// Image helper using Unsplash featured queries for fashion-related product imagery
-const IMAGE_KEYWORDS = {
-  top: 'tshirt,fashion',
-  outer: 'jacket,fashion',
-  bottom: 'jeans,fashion',
-  shoes: 'sneakers,sport',
-  bag: 'bag,fashion',
-  acc: 'accessory,fashion',
+// Curated direct Unsplash photo URLs per category (source.unsplash.com was deprecated — broken images)
+const CATEGORY_IMAGES = {
+  top: [
+    'photo-1521572163474-6864f9cf17ab', // plain tee
+    'photo-1583743814966-8936f5b7be1a', // hoodie
+    'photo-1586790170083-2f9ceadc732d', // black tee
+    'photo-1618354691373-d851c5c3a990', // tee folded
+    'photo-1527719327859-c6ce80353573', // hoodie grey
+    'photo-1620799140408-edc6dcb6d633', // hoodie
+    'photo-1503341504253-dff4815485f1', // sweatshirt
+    'photo-1556821840-3a63f95609a7', // tee
+    'photo-1562157873-818bc0726f68', // long sleeve
+    'photo-1576566588028-4147f3842f27', // shirt
+  ],
+  outer: [
+    'photo-1551028719-00167b16eac5', // denim jacket
+    'photo-1544022613-e87ca75a784a', // jacket
+    'photo-1591047139829-d91aecb6caea', // bomber
+    'photo-1548883354-7622d03aca27', // puffer
+    'photo-1578932750355-5eb30ece487a', // coat
+    'photo-1559563458-527698bf5295', // leather jacket
+    'photo-1539533018447-63fcce2678e3', // coat
+    'photo-1520975954732-35dd22299614', // trench coat
+    'photo-1593030761757-71fae45fa0e7', // varsity jacket
+  ],
+  bottom: [
+    'photo-1542272604-787c3835535d', // jeans
+    'photo-1541099649105-f69ad21f3246', // jeans
+    'photo-1473966968600-fa801b869a1a', // black pants
+    'photo-1584865288642-42078afe6942', // trousers
+    'photo-1624378439575-d8705ad7ae80', // jeans hanging
+    'photo-1604176354204-9268737828e4', // pants
+    'photo-1594633313593-bab3825d0caf', // pants
+    'photo-1602293589930-45aad59ba3ab', // jeans
+    'photo-1552902865-b72c031ac5ea', // denim
+  ],
+  shoes: [
+    'photo-1542291026-7eec264c27ff', // nike red
+    'photo-1460353581641-37baddab0fa2', // sneakers
+    'photo-1491553895911-0055eca6402d', // sneakers
+    'photo-1595950653106-6c9ebd614d3a', // white sneakers
+    'photo-1600269452121-4f2416e55c28', // sneakers pair
+    'photo-1551107696-a4b0c5a0d9a2', // sneakers
+    'photo-1608231387042-66d1773070a5', // puma
+    'photo-1549298916-b41d501d3772', // shoes
+    'photo-1552346154-21d32810aba3', // sneaker
+    'photo-1525966222134-fcfa99b8ae77', // vans
+    'photo-1539185441755-769473a23570', // new balance
+    'photo-1542826438-bd32f43d626f', // sneaker
+  ],
+  bag: [
+    'photo-1548036328-c9fa89d128fa', // backpack
+    'photo-1553062407-98eeb64c6a62', // backpack
+    'photo-1566150905458-1bf1fc113f0d', // tote
+    'photo-1622560480605-d83c853bc5c3', // bag
+    'photo-1590874103328-eac38a683ce7', // purse
+    'photo-1547949003-9792a18a2601', // backpack
+    'photo-1581605405669-fcdf81165afa', // tote
+    'photo-1544816155-12df9643f363', // bag
+  ],
+  acc: [
+    'photo-1514327605112-b887c0e61c0a', // black cap
+    'photo-1588850561407-ed78c282e89b', // cap display
+    'photo-1576871337622-98d48d1cf531', // beanie
+    'photo-1556306535-0f09a537f0a3', // beanie grey
+    'photo-1485968579580-b6d095142e6e', // cap front
+    'photo-1521369909029-2afed882baee', // cap
+    'photo-1517940310602-26535839fe84', // beanie
+    'photo-1521223890158-f9f7c3d5d504', // cap
+  ],
 };
+
+function _hash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 function img(seed, w = 500, h = 600) {
-  const category = seed.split('-')[1] || 'fashion';
-  const query = IMAGE_KEYWORDS[category] || 'fashion';
-  return `https://source.unsplash.com/featured/${w}x${h}/?${query}`;
+  const parts = seed.split('-');
+  // seed format: "brandId-category-id" or "brandId-category-hid" or "brandId-category-id-a"
+  // find the category token
+  let category = 'top';
+  for (const p of parts) {
+    if (CATEGORY_IMAGES[p]) { category = p; break; }
+  }
+  const pool = CATEGORY_IMAGES[category];
+  const id = pool[_hash(seed) % pool.length];
+  return `https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&q=70`;
 }
 
 // Helper to make a product

@@ -156,7 +156,7 @@ function renderHeader(activeNav = '') {
           <a href="category.html?cat=bottom" ${activeNav==='bottom'?'class="active"':''}>하의</a>
           <a href="category.html?cat=shoes" ${activeNav==='shoes'?'class="active"':''}>신발</a>
           <a href="brand.html" ${activeNav==='brand'?'class="active"':''}>브랜드</a>
-          <a href="campaign.html" ${activeNav==='campaign'?'class="active"':''} style="color:var(--color-accent)">캠페인</a>
+          <a href="campaign.html" ${activeNav==='campaign'?'class="active"':''} style="color:var(--color-accent)">이벤트</a>
         </nav>
         <div class="header-actions">
           <form class="search-box" onsubmit="event.preventDefault(); AMP.track('[Global] Header Search Submitted', {keyword: this.q.value}); location.href='search.html?q='+encodeURIComponent(this.q.value);">
